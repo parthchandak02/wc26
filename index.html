@@ -37,9 +37,21 @@ html, body {
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 70% 45% at 20% 30%, rgba(51,154,240,0.03) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 60% at 80% 70%, rgba(34,139,230,0.04) 0%, transparent 70%),
+    var(--bg);
+  pointer-events: none;
 }
 
 #bg-canvas {
@@ -74,10 +86,9 @@ html, body {
 }
 
 .hero-day {
-  font-family: Charter, "Bitstream Charter", Georgia, serif;
   font-size: clamp(1.75rem, 5vw, 3rem);
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  letter-spacing: -0.015em;
   line-height: 1.1;
   color: var(--text);
 }
@@ -101,8 +112,8 @@ html, body {
 .hint.hidden { opacity: 0; pointer-events: none; }
 
 .section-title {
-  font-family: Charter, "Bitstream Charter", Georgia, serif;
   font-size: 0.72rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--text-muted);
@@ -131,9 +142,10 @@ html, body {
   background: #fff;
   border: var(--fine) solid rgba(73,80,87,0.14);
   border-left: var(--medium) solid var(--accent);
-  border-radius: 2px;
+  border-radius: 6px;
   padding: 0.55rem 0.7rem;
   transition: border-color var(--motion-base) var(--ease-out-expo);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .today-card.status-finished { border-left-color: var(--stroke-mid); }
 .today-card.status-upcoming { border-left-color: rgba(108,117,125,0.35); }
@@ -208,15 +220,22 @@ html, body {
 .group-card {
   background: #fff;
   border: var(--fine) solid rgba(73,80,87,0.14);
-  border-radius: 2px;
+  border-radius: 6px;
   overflow: hidden;
   cursor: pointer;
-  transition: box-shadow var(--motion-base) var(--ease-out-expo), border-color var(--motion-base) var(--ease-out-expo);
+  transition: box-shadow var(--motion-base) var(--ease-out-expo), border-color var(--motion-base) var(--ease-out-expo), transform var(--motion-base) var(--ease-out-expo);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
-.group-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
-.group-card.expanded { border-color: rgba(51,154,240,0.45); }
+.group-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  border-color: rgba(73,80,87,0.2);
+}
+.group-card.expanded {
+  border-color: rgba(51,154,240,0.45);
+  box-shadow: 0 4px 20px rgba(51,154,240,0.1);
+}
 
 .group-header {
   display: flex;
@@ -227,10 +246,10 @@ html, body {
   border-bottom: var(--fine) solid rgba(73,80,87,0.1);
 }
 .group-letter {
-  font-family: Charter, Georgia, serif;
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--stroke);
+  letter-spacing: 0.04em;
 }
 .group-chevron {
   font-size: 0.7rem;
@@ -324,7 +343,7 @@ html, body {
   position: relative;
   background: #fff;
   border: var(--fine) solid rgba(73,80,87,0.14);
-  border-radius: 2px;
+  border-radius: 6px;
   overflow-x: auto;
   padding: 0.75rem;
 }
@@ -525,7 +544,7 @@ function getStatus(m) {
 function tournamentDay(refDate) {
   const start = new Date(C.tournamentStart + 'T00:00:00');
   const d = refDate ? new Date(refDate + 'T12:00:00') : new Date();
-  const diff = Math.floor((d - start) / 86400000) + 1);
+  const diff = Math.floor((d - start) / 86400000) + 1;
   return Math.max(1, Math.min(diff, 32));
 }
 
@@ -790,9 +809,9 @@ function drawBracket() {
     const y0 = (cssH - blockH) / 2;
 
     ctx.fillStyle = PALETTE.textMuted;
-    ctx.font = '700 8px Charter, Georgia, serif';
+    ctx.font = '700 8px system-ui, sans-serif';
     ctx.fillText(C.bracket.roundLabels[round] || round, x, y0 - 10);
-    ctx.font = '600 9px "Segoe UI", sans-serif';
+    ctx.font = '600 9px system-ui, sans-serif';
 
     ms.forEach((m, ri) => {
       const y = y0 + ri * (slotH + rowGap);
