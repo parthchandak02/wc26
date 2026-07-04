@@ -950,18 +950,47 @@ function applyData(allRes, standingsRes, source) {
  renderAll();
 }
 
+async function fetchFromWhenIskickoff() {
+ try {
+  const [groupsRes, teamsRes, matchesRes] = await Promise.all([
+   fetchJSON('https://wheniskickoff.com/data/v1/groups.json'),
+   fetchJSON('https://wheniskickoff.com/data/v1/teams.json'),
+   fetchJSON('https://wheniskickoff.com/data/v1/matches.json')
+  ]);
+  // Reformat to match our expected shape
+  const wrapped = { ok: true, updated: Date.now()/1000, matches: (matchesRes.data || []).map(m => ({
+   id: m.num, round: m.phase === 'group' ? 'Matchday 1' : m.phase, group: m.group ? 'Group ' + m.group : '',
+   team1: m.home_name || m.home, team2: m.away_name || m.away,
+   status: m.status ? m.status.toLowerCase() : 'finished',
+   score: m.score_home != null ? [m.score_home, m.score_away] : null,
+   date: m.date, time: m.time_utc || '',
+   ground: m.venue_name || ''
+  })) };
+  const wrappedStandings = null; // No standings endpoint — will be derived from matches
+  applyData(wrapped, wrappedStandings, 'live');
+  return true;
+ } catch(_) { return false; }
+}
+
 async function fetchLive() {
+ // Primary: wcup2026.org (live data)
  try {
   const [allRes, standingsRes] = await Promise.all([
    fetchJSON(C.apiBase + 'all'),
    fetchJSON(C.apiBase + 'standings')
   ]);
   applyData(allRes, standingsRes, 'live');
- } catch (err) {
-  const cached = loadCache();
-  if (cached && cached.all) {
-   applyData(cached.all, cached.standings, 'cached');
-  }
+  return;
+ } catch (_) {}
+
+ // Fallback: wheniskickoff.com (stale but has group stage results)
+ const ok = await fetchFromWhenIskickoff();
+ if (ok) return;
+
+ // Last resort: localStorage cache
+ const cached = loadCache();
+ if (cached && cached.all) {
+  applyData(cached.all, cached.standings, 'cached');
  }
 }
 
