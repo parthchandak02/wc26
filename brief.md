@@ -1,23 +1,48 @@
 # wc26 v2 — World Cup 2026 Globe Dashboard
 
 ## Concept
-Interactive 3D world map of all 48 World Cup 2026 nations. Floating filter panel highlights countries by tournament stage (group qualifiers, round of 16, quarter-finals, etc.) or confederation. Tap any country on the globe for standings and stats.
+Interactive 3D world map of all 48 World Cup 2026 nations. Floating filter panel highlights countries by tournament stage or confederation. Tap any country for standings.
 
-**Narrative Pattern:** Drill-down — world overview → tap country for detail panel.
-
-**Tier 2 Patterns:** Quiet Zone Detail Panel + Hero Number (Day N + stage label)
-
-**Render:** R3F + drei + three-globe, Vite, Cloudflare Pages at wc26.parthchandak.info
+**Metaphor family:** map
+**Narrative Pattern:** Drill-down
+**Tier 2 Patterns:** Quiet Zone Detail Panel + Hero Number
 
 ## Data Source
-- wheniskickoff.com APIs (groups, teams, matches) — same as v1
+- `https://wheniskickoff.com/data/v1/groups.json`
+- `https://wheniskickoff.com/data/v1/teams.json`
+- `https://wheniskickoff.com/data/v1/matches.json`
+- **Poll interval:** 60s (`cache: no-store` on fetch)
 - world-atlas countries-110m for globe polygons
+- Fallback: localStorage `wc26-cache_v2`, then embedded groups
 
-## Visual Style
-- Dark globe atmosphere (Slate editorial chrome on light floating panels)
-- Blue highlight for active filter nations
-- Dim blue for other WC participants
+## Encoding Contract
+| Data field | Visual channel | "Bigger/brighter means..." |
+|------------|----------------|----------------------------|
+| filter membership | polygon cap color + altitude | nation matches active filter |
+| group points | detail panel | more points = better standing |
+| live matches | hero KPI | matches in progress now |
 
-## Migration
-- v1: single-file DOM dashboard on GitHub Pages
-- v2: 3D globe on Cloudflare Pages (creative-factory R3F tier)
+## Creative Scene (R3F)
+- Primary metaphor: globe map with nation highlights
+- drei: OrbitControls, Stars
+- three-globe: country polygons, tap to select
+- Default camera: full globe, auto-rotate
+
+## UX Chrome
+- Hero: Day N + stage + live match count
+- Stamp: `wheniskickoff.com · N nations · live|cached|fallback · Xs ago`
+- #desc: one line at bottom
+- Reduced motion: disable globe auto-rotate (future)
+
+## Render tier
+r3f — deploy Cloudflare Pages
+
+## Deploy (cf-pages-r3f-deploy skill)
+```bash
+npm run build
+~/.hermes/bin/ship-creative-daily.sh ~/projects/wc26 dist
+```
+(requires CLOUDFLARE_* and GITHUB_TOKEN in Hermes env)
+- Slug: wc26
+- URL: https://wc26.parthchandak.info
+- Never GitHub Pages

@@ -50,9 +50,16 @@ export type TournamentState = {
   standings: Record<string, Standing[]>
   source: 'live' | 'cached' | 'fallback'
   updated: string
+  fetchedAt: number
+  apiGenerated: string | null
   tournamentDay: number
   stageLabel: string
+  liveMatchCount: number
+  finishedMatchCount: number
 }
+
+const CACHE_KEY = 'wc26-cache_v2'
+export const POLL_MS = 60_000
 
 const API = {
   groups: 'https://wheniskickoff.com/data/v1/groups.json',
@@ -229,17 +236,19 @@ function tournamentDay(matches: Match[]): number {
 }
 
 export async function loadTournament(): Promise<TournamentState> {
+  const fetchedAt = Date.now()
   let groups = FALLBACK_GROUPS
   let teams: Record<string, Team> = {}
   let matches: Match[] = []
   let source: TournamentState['source'] = 'fallback'
   let updated = new Date().toISOString()
+  let apiGenerated: string | null = null
 
   try {
     const [gRes, tRes, mRes] = await Promise.all([
-      fetch(API.groups, { cache: 'no-cache' }),
-      fetch(API.teams, { cache: 'no-cache' }),
-      fetch(API.matches, { cache: 'no-cache' }),
+      fetch(API.groups, { cache: 'no-store', headers: { Accept: 'application/json' } }),
+      fetch(API.teams, { cache: 'no-store', headers: { Accept: 'application/json' } }),
+      fetch(API.matches, { cache: 'no-store', headers: { Accept: 'application/json' } }),
     ])
     if (!gRes.ok || !tRes.ok || !mRes.ok) throw new Error('api')
     const gJson = await gRes.json()
@@ -250,19 +259,23 @@ export async function loadTournament(): Promise<TournamentState> {
     for (const t of tJson.data ?? []) map[t.code] = t
     teams = map
     matches = mJson.data ?? []
-    updated = mJson.meta?.generated ?? updated
+    apiGenerated = mJson.meta?.generated ?? gJson.meta?.generated ?? null
+    updated = apiGenerated ?? new Date().toISOString()
     source = 'live'
+    persistCache(gJson, tJson, mJson)
   } catch {
     try {
-      const cached = localStorage.getItem('wc26-cache')
+      const cached = localStorage.getItem(CACHE_KEY) ?? localStorage.getItem('wc26-cache')
       if (cached) {
         const c = JSON.parse(cached)
-        groups = c.groups?.data ?? FALLBACK_GROUPS
+        groups = c.groups?.data ?? c.data ?? FALLBACK_GROUPS
+        const rawTeams = c.teams?.data ?? []
         const map: Record<string, Team> = {}
-        for (const t of c.teams?.data ?? []) map[t.code] = t
+        for (const t of rawTeams) map[t.code] = t
         teams = map
         matches = c.matches?.data ?? []
-        updated = c.matches?.meta?.generated ?? updated
+        apiGenerated = c.matches?.meta?.generated ?? null
+        updated = apiGenerated ?? new Date(c.saved ?? Date.now()).toISOString()
         source = 'cached'
       }
     } catch { /* keep fallback */ }
@@ -273,6 +286,9 @@ export async function loadTournament(): Promise<TournamentState> {
     standings[g.group] = computeStandings(g.teams, matches)
   }
 
+  const liveMatchCount = matches.filter((m) => m.status === 'LIVE').length
+  const finishedMatchCount = matches.filter((m) => m.status === 'FINISHED').length
+
   return {
     teams,
     groups,
@@ -280,13 +296,20 @@ export async function loadTournament(): Promise<TournamentState> {
     standings,
     source,
     updated,
+    fetchedAt,
+    apiGenerated,
     tournamentDay: tournamentDay(matches),
     stageLabel: inferStage(matches),
+    liveMatchCount,
+    finishedMatchCount,
   }
 }
 
 export function persistCache(groups: unknown, teams: unknown, matches: unknown) {
   try {
-    localStorage.setItem('wc26-cache', JSON.stringify({ groups, teams, matches, saved: Date.now() }))
+    localStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({ groups, teams, matches, saved: Date.now() }),
+    )
   } catch { /* ignore */ }
 }

@@ -38,6 +38,14 @@
   color: var(--text-muted);
 }
 
+.hero-kpi {
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
 .globe-wrap {
   position: fixed;
   inset: 0;
