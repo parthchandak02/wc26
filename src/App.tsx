@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { GlobeScene } from './components/GlobeScene'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { WorldMapScene } from './components/WorldMapScene'
 import { FilterPanel } from './components/FilterPanel'
+import { DataStamp } from './components/DataStamp'
 import { FIFA_TO_ISO3, type FilterId } from './data/fifaIso'
 import { useLiveTournament } from './hooks/useLiveTournament'
 import { getTeamsForFilter, type Team, type TournamentState } from './lib/tournament'
@@ -25,12 +26,32 @@ function formatApiAge(iso: string | null): string {
 }
 
 export default function App() {
-  const { state, loading, refreshing, secondsAgo } = useLiveTournament()
+  const { state, loading, refreshing } = useLiveTournament()
   const [filter, setFilter] = useState<FilterId>('group-qualifiers')
   const [selected, setSelected] = useState<Team | null>(null)
   const [panelMin, setPanelMin] = useState(false)
 
-  if (loading || !state) {
+  const teamsRef = useRef<Record<string, Team>>({})
+  if (state) teamsRef.current = state.teams
+
+  const onSelectTeam = useCallback((code: string) => {
+    const t = teamsRef.current[code]
+    if (t) setSelected(t)
+  }, [])
+
+  const highlight = useMemo(
+    () => (state ? getTeamsForFilter(filter, state) : new Set<string>()),
+    [filter, state],
+  )
+
+  const allNations = useMemo(
+    () => (state ? new Set(Object.keys(state.teams)) : new Set<string>()),
+    [state?.teams],
+  )
+
+  const counts = useMemo(() => (state ? buildCounts(state) : undefined), [state])
+
+  if (loading || !state || !counts) {
     return (
       <div className="loading">
         <p>Loading World Cup 2026 data…</p>
@@ -38,8 +59,6 @@ export default function App() {
     )
   }
 
-  const highlight = getTeamsForFilter(filter, state)
-  const allNations = new Set(Object.keys(state.teams))
   const nationCount = allNations.size
   const standing = selected
     ? state.standings[state.teams[selected.code]?.group]?.find((s) => s.code === selected.code)
@@ -64,19 +83,16 @@ export default function App() {
       <FilterPanel
         active={filter}
         onChange={setFilter}
-        counts={buildCounts(state)}
+        counts={counts}
         minimized={panelMin}
         onToggleMinimize={() => setPanelMin((v) => !v)}
       />
 
-      <div className="globe-wrap">
-        <GlobeScene
+      <div className="map-wrap">
+        <WorldMapScene
           highlightFifa={highlight}
           allParticipantFifa={allNations}
-          onSelectTeam={(code) => {
-            const t = state.teams[code]
-            if (t) setSelected(t)
-          }}
+          onSelectTeam={onSelectTeam}
         />
       </div>
 
@@ -100,21 +116,23 @@ export default function App() {
             )}
             <div><dt>Map ISO</dt><dd>{FIFA_TO_ISO3[selected.code] ?? '-'}</dd></div>
           </dl>
-          <p className="detail-hint">Tap another country on the globe to compare.</p>
+          <p className="detail-hint">Tap another country on the map to compare.</p>
         </div>
       )}
 
       <div className="chrome">
-        <p id="stamp" className="stamp">
-          wheniskickoff.com · {nationCount} nations · <strong>{sourceLabel}</strong> · {secondsAgo}s ago
-          {apiAge ? ` · API ${apiAge}` : ''}
-        </p>
+        <DataStamp
+          fetchedAt={state.fetchedAt}
+          nationCount={nationCount}
+          sourceLabel={sourceLabel}
+          apiAge={apiAge}
+        />
         <p id="legend" className="legend">
           <span className="swatch bright" /> Selected filter ({highlight.size})
           <span className="swatch dim" /> Other participants
         </p>
         <p id="desc" className="desc">
-          3D World Cup map - filter by stage or region, tap a country for standings. Refreshes every 60s.
+          Flat 3D World Cup map — filter by stage or region, tap a country for standings. Refreshes every 60s.
         </p>
       </div>
     </div>

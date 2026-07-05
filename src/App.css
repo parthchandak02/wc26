@@ -46,7 +46,7 @@
   letter-spacing: 0.02em;
 }
 
-.globe-wrap {
+.map-wrap {
   position: fixed;
   inset: 0;
   z-index: 0;
