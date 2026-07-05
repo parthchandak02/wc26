@@ -6,7 +6,6 @@ import * as THREE from 'three'
 import { feature } from 'topojson-client'
 import type { FeatureCollection, Geometry } from 'geojson'
 import { FIFA_TO_ISO3, ISO3_TO_FIFA } from '../data/fifaIso'
-import type { Team } from '../lib/tournament'
 
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
 
