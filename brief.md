@@ -1,9 +1,9 @@
-# wc26 v2 — World Cup 2026 Globe Dashboard
+# wc26 v3 — World Cup 2026 Flat 3D Map
 
 ## Concept
-Interactive 3D world map of all 48 World Cup 2026 nations. Floating filter panel highlights countries by tournament stage or confederation. Tap any country for standings.
+Interactive **flat 3D** world map of all 48 World Cup 2026 nations — extruded countries on a tilted board (not a spinning globe). Floating filter panel highlights nations by tournament stage or confederation. Tap any country for standings.
 
-**Metaphor family:** map
+**Metaphor family:** map (flat choropleth board)
 **Narrative Pattern:** Drill-down
 **Tier 2 Patterns:** Quiet Zone Detail Panel + Hero Number
 
@@ -12,37 +12,41 @@ Interactive 3D world map of all 48 World Cup 2026 nations. Floating filter panel
 - `https://wheniskickoff.com/data/v1/teams.json`
 - `https://wheniskickoff.com/data/v1/matches.json`
 - **Poll interval:** 60s (`cache: no-store` on fetch)
-- world-atlas countries-110m for globe polygons
+- Build-time: world-atlas countries-110m → `public/countries.json` (Natural Earth projection)
 - Fallback: localStorage `wc26-cache_v2`, then embedded groups
 
 ## Encoding Contract
 | Data field | Visual channel | "Bigger/brighter means..." |
 |------------|----------------|----------------------------|
-| filter membership | polygon cap color + altitude | nation matches active filter |
+| filter membership | extrusion height + emissive fill | nation matches active filter |
 | group points | detail panel | more points = better standing |
 | live matches | hero KPI | matches in progress now |
 
 ## Creative Scene (R3F)
-- Primary metaphor: globe map with nation highlights
-- drei: OrbitControls, Stars
-- three-globe: country polygons, tap to select
-- Default camera: full globe, auto-rotate
+- Primary metaphor: flat extruded map board with selective lift
+- drei: OrbitControls (pan/zoom/tilt), ContactShadows
+- Build script: `scripts/build-countries.mjs` (d3-geo Natural Earth)
+- Camera: oblique top-down; no auto-rotate (stable, readable)
+
+## Performance guardrails
+- Stable `onSelectTeam` callback (no WebGL remount on poll)
+- `DataStamp` owns 1s clock (canvas not re-rendered every second)
+- Memoized filter sets; country geometry baked at build time
+- DPR cap 1.75 on mobile
 
 ## UX Chrome
 - Hero: Day N + stage + live match count
 - Stamp: `wheniskickoff.com · N nations · live|cached|fallback · Xs ago`
 - #desc: one line at bottom
-- Reduced motion: disable globe auto-rotate (future)
 
 ## Render tier
-r3f — deploy Cloudflare Pages
+r3f — deploy Cloudflare Pages only
 
 ## Deploy (cf-pages-r3f-deploy skill)
 ```bash
 npm run build
 ~/.hermes/bin/ship-creative-daily.sh ~/projects/wc26 dist
 ```
-(requires CLOUDFLARE_* and GITHUB_TOKEN in Hermes env)
 - Slug: wc26
 - URL: https://wc26.parthchandak.info
-- Never GitHub Pages
+- GitHub Pages: **disabled** (404 on github.io)

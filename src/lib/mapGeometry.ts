@@ -34,11 +34,15 @@ function ringsToShape(rings: number[][]): THREE.Shape {
 export function buildCountryGroup(polygons: number[][][][], material: THREE.Material): THREE.Group {
   const group = new THREE.Group()
   for (const rings of polygons) {
-    const shape = ringsToShape(rings)
-    const geom = new THREE.ExtrudeGeometry(shape, EXTRUDE)
-    geom.computeVertexNormals()
-    const mesh = new THREE.Mesh(geom, material)
-    group.add(mesh)
+    try {
+      const shape = ringsToShape(rings)
+      const geom = new THREE.ExtrudeGeometry(shape, EXTRUDE)
+      geom.computeVertexNormals()
+      const mesh = new THREE.Mesh(geom, material.clone())
+      group.add(mesh)
+    } catch {
+      /* skip degenerate polygons */
+    }
   }
   return group
 }
@@ -51,10 +55,10 @@ export function centerMap(group: THREE.Group, width: number, height: number): vo
 export type CountryVisual = 'highlight' | 'dim' | 'neutral' | 'base'
 
 const PALETTE: Record<CountryVisual, { color: string; emissive: string; emissiveIntensity: number; metalness: number; roughness: number }> = {
-  highlight: { color: '#4dabf7', emissive: '#228be6', emissiveIntensity: 0.45, metalness: 0.15, roughness: 0.35 },
-  dim: { color: '#2c4a6b', emissive: '#1c3d5a', emissiveIntensity: 0.12, metalness: 0.1, roughness: 0.55 },
-  neutral: { color: '#1a2838', emissive: '#0d1b2a', emissiveIntensity: 0.05, metalness: 0.08, roughness: 0.65 },
-  base: { color: '#121f2e', emissive: '#0a1628', emissiveIntensity: 0.02, metalness: 0.05, roughness: 0.7 },
+  highlight: { color: '#4dabf7', emissive: '#228be6', emissiveIntensity: 0.55, metalness: 0.2, roughness: 0.32 },
+  dim: { color: '#3d5a80', emissive: '#2c4a6b', emissiveIntensity: 0.22, metalness: 0.12, roughness: 0.48 },
+  neutral: { color: '#2b3f55', emissive: '#1e3048', emissiveIntensity: 0.15, metalness: 0.1, roughness: 0.55 },
+  base: { color: '#243447', emissive: '#1a2838', emissiveIntensity: 0.08, metalness: 0.08, roughness: 0.62 },
 }
 
 export function applyVisual(mat: THREE.MeshStandardMaterial, visual: CountryVisual): void {

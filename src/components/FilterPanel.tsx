@@ -29,7 +29,7 @@ export function FilterPanel({
       <header className="filter-header">
         <div>
           <h2>Map filters</h2>
-          <p>Highlight nations on the globe</p>
+          <p>Highlight nations on the map</p>
         </div>
         <button type="button" className="minimize-btn" onClick={onToggleMinimize} aria-label={minimized ? 'Expand' : 'Minimize'}>
           {minimized ? '◧' : '−'}

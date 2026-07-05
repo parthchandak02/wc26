@@ -1,22 +1,24 @@
 /**
- * Build-time: project world-atlas countries to flat Natural Earth coords.
- * Output: public/countries.json (cached at deploy, no runtime triangulation).
+ * Build-time: project geo-countries to flat Natural Earth coords with ISO3 codes.
+ * Output: public/countries.json
  */
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { feature } from 'topojson-client'
 import { geoNaturalEarth1 } from 'd3-geo'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
 const OUT = join(__dir, '../public/countries.json')
-const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
+const GEO_URL =
+  'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson'
 const WIDTH = 960
 const HEIGHT = 520
 const PAD = 24
 
 function isoFromProps(p) {
-  return String(p.iso_a3 || p.ISO_A3 || p.adm0_a3 || '').toUpperCase()
+  const iso = String(p['ISO3166-1-Alpha-3'] || p.ISO_A3 || p.iso_a3 || '').toUpperCase()
+  if (!iso || iso === '-99' || iso === 'UNK') return ''
+  return iso
 }
 
 function ringArea(ring) {
@@ -51,17 +53,21 @@ function projectRings(geometry, projection) {
 }
 
 async function main() {
-  const world = await fetch(GEO_URL).then((r) => r.json())
-  const countries = feature(world, world.objects.countries)
+  const geo = await fetch(GEO_URL).then((r) => {
+    if (!r.ok) throw new Error(`geo-countries fetch failed: ${r.status}`)
+    return r.json()
+  })
+
   const projection = geoNaturalEarth1().fitExtent(
     [[PAD, PAD], [WIDTH - PAD, HEIGHT - PAD]],
-    countries,
+    geo,
   )
 
   const items = []
-  for (const f of countries.features) {
+  for (const f of geo.features) {
     const iso = isoFromProps(f.properties || {})
-    const name = f.properties?.name || ''
+    if (!iso) continue
+    const name = f.properties?.name || f.properties?.ADMIN || ''
     const polygons = projectRings(f.geometry, projection)
     if (!polygons.length) continue
     items.push({ iso, name, polygons })
@@ -70,7 +76,13 @@ async function main() {
   items.sort((a, b) => a.iso.localeCompare(b.iso))
   mkdirSync(dirname(OUT), { recursive: true })
   writeFileSync(OUT, JSON.stringify({ width: WIDTH, height: HEIGHT, countries: items }))
-  console.log(`Wrote ${items.length} countries → ${OUT}`)
+
+  const withPoly = items.filter((c) => c.polygons.length > 0).length
+  console.log(`Wrote ${items.length} countries (${withPoly} with geometry) → ${OUT}`)
+  if (items.length < 150) {
+    console.error('ERROR: expected ~200+ countries with ISO codes')
+    process.exit(1)
+  }
 }
 
 main().catch((e) => {

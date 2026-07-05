@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/build-countries.mjs && vite",
-    "build": "node scripts/build-countries.mjs && vite build",
+    "build": "node scripts/build-countries.mjs && node scripts/verify-countries.mjs && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

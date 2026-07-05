@@ -52,6 +52,36 @@
   z-index: 0;
 }
 
+.map-canvas-wrap {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.map-canvas-wrap canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.map-loading,
+.map-error {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.map-error {
+  color: #ff8787;
+  max-width: 280px;
+  text-align: center;
+}
+
 .filter-panel {
   position: fixed;
   top: 5.5rem;

@@ -235,6 +235,35 @@ function tournamentDay(matches: Match[]): number {
   return Math.max(1, Math.min(32, diff > 0 ? diff : finished > 0 ? Math.ceil(finished / 3) : 1))
 }
 
+const CONFED_BY_CODE: Record<string, string> = {
+  ARG: 'CONMEBOL', BRA: 'CONMEBOL', COL: 'CONMEBOL', ECU: 'CONMEBOL', PAR: 'CONMEBOL', URU: 'CONMEBOL',
+  MEX: 'CONCACAF', USA: 'CONCACAF', CAN: 'CONCACAF', CRC: 'CONCACAF', PAN: 'CONCACAF', HAI: 'CONCACAF',
+  ENG: 'UEFA', SCO: 'UEFA', GER: 'UEFA', FRA: 'UEFA', ESP: 'UEFA', POR: 'UEFA', NED: 'UEFA', BEL: 'UEFA',
+  CRO: 'UEFA', SUI: 'UEFA', AUT: 'UEFA', TUR: 'UEFA', WAL: 'UEFA', POL: 'UEFA', UKR: 'UEFA', CZE: 'UEFA',
+  JPN: 'AFC', KOR: 'AFC', KSA: 'AFC', IRN: 'AFC', QAT: 'AFC', AUS: 'AFC', UZB: 'AFC', JOR: 'AFC', IRQ: 'AFC',
+  MAR: 'CAF', SEN: 'CAF', GHA: 'CAF', CIV: 'CAF', RSA: 'CAF', EGY: 'CAF', TUN: 'CAF', DZA: 'CAF', COD: 'CAF',
+  CPV: 'CAF', NZL: 'OFC', CUW: 'CONCACAF', BIH: 'UEFA', NOR: 'UEFA', SWE: 'UEFA',
+}
+
+function teamsFromGroups(groups: GroupData[]): Record<string, Team> {
+  const map: Record<string, Team> = {}
+  for (const g of groups) {
+    for (const code of g.teams) {
+      if (map[code]) continue
+      map[code] = {
+        code,
+        name: code,
+        flag: '🏳️',
+        group: g.group,
+        rank: 0,
+        confederation: CONFED_BY_CODE[code] ?? 'UEFA',
+        slug: code.toLowerCase(),
+      }
+    }
+  }
+  return map
+}
+
 export async function loadTournament(): Promise<TournamentState> {
   const fetchedAt = Date.now()
   let groups = FALLBACK_GROUPS
@@ -279,6 +308,13 @@ export async function loadTournament(): Promise<TournamentState> {
         source = 'cached'
       }
     } catch { /* keep fallback */ }
+  }
+
+  if (Object.keys(teams).length === 0) {
+    teams = teamsFromGroups(groups)
+    if (source === 'fallback') {
+      /* groups-only fallback still powers filters + map highlights */
+    }
   }
 
   const standings: Record<string, Standing[]> = {}
