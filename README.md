@@ -1,19 +1,17 @@
-# README
+# WC26 — World Cup 2026 Map
 
-World Cup 2026 on a 3D globe — filter by stage or confederation, tap a country for group standings.
+Live tournament standings on an **SVG choropleth world map** (d3-geo + d3-zoom). Filter by stage or confederation; tap a country for group standings.
 
-**Visual Style:** Dark globe + light floating analytics panel (Slate editorial)
+**Visual style:** Glass editorial UI on dark map canvas
 
-**Data Source:** wheniskickoff.com (groups, teams, matches)
+**Data source:** wheniskickoff.com (groups, teams, matches) with embedded fallback
 
-**How it works:**
-- Left panel: pick a filter (group winners, round of 16, UEFA nations, etc.)
-- Globe highlights matching countries in blue
-- Tap a country for name, group, points, goal difference
-- Hero shows tournament day and current stage
-
-**GitHub:** https://github.com/parthchandak02/wc26
+**Controls:** drag to pan, pinch/scroll to zoom, tap country for detail
 
 **Live:** https://wc26.parthchandak.info
 
-**Tech:** React Three Fiber + three-globe. Hosted on Cloudflare Pages.
+**GitHub:** https://github.com/parthchandak02/wc26
+
+**Tech:** React 19 + d3-geo + d3-zoom + world-atlas 110m. Cloudflare Pages.
+
+**Note:** v3 SVG rewrite (Jul 2026) replaced an earlier R3F globe. Manual rescue, not a creative-factory daily.
