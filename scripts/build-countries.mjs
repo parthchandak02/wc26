@@ -1,24 +1,48 @@
 /**
- * Build-time: project geo-countries to flat Natural Earth coords with ISO3 codes.
- * Output: public/countries.json
+ * Build compact country polygons (110m) + ISO3 codes for fast mobile load.
  */
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { feature } from 'topojson-client'
 import { geoNaturalEarth1 } from 'd3-geo'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
 const OUT = join(__dir, '../public/countries.json')
-const GEO_URL =
-  'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson'
+const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
+const ISO_CSV =
+  'https://raw.githubusercontent.com/lukes/ISO-3166-Countries-with-Regional-Codes/master/all/all.csv'
 const WIDTH = 960
 const HEIGHT = 520
-const PAD = 24
+const PAD = 20
+const MAX_RING_PTS = 72
 
-function isoFromProps(p) {
-  const iso = String(p['ISO3166-1-Alpha-3'] || p.ISO_A3 || p.iso_a3 || '').toUpperCase()
-  if (!iso || iso === '-99' || iso === 'UNK') return ''
-  return iso
+async function loadNumericToIso3() {
+  const text = await fetch(ISO_CSV).then((r) => r.text())
+  const map = {}
+  for (const line of text.split('\n').slice(1)) {
+    if (!line.trim()) continue
+    const parts = line.split(',')
+    const iso3 = (parts[2] || '').trim().toUpperCase()
+    const raw = (parts[3] || '').trim()
+    if (!iso3 || iso3.length !== 3 || !raw) continue
+    const num = String(parseInt(raw, 10))
+    const padded = num.padStart(3, '0')
+    map[num] = iso3
+    map[padded] = iso3
+  }
+  return map
+}
+
+function decimateRing(ring) {
+  if (ring.length <= MAX_RING_PTS) return ring
+  const step = Math.ceil(ring.length / MAX_RING_PTS)
+  const out = []
+  for (let i = 0; i < ring.length; i += step) out.push(ring[i])
+  const last = ring[ring.length - 1]
+  const tail = out[out.length - 1]
+  if (!tail || tail[0] !== last[0] || tail[1] !== last[1]) out.push(last)
+  return out
 }
 
 function ringArea(ring) {
@@ -31,19 +55,19 @@ function ringArea(ring) {
 
 function projectRings(geometry, projection) {
   const polys = []
-  if (geometry.type === 'Polygon') {
-    polys.push(geometry.coordinates)
-  } else if (geometry.type === 'MultiPolygon') {
+  if (geometry.type === 'Polygon') polys.push(geometry.coordinates)
+  else if (geometry.type === 'MultiPolygon') {
     for (const p of geometry.coordinates) polys.push(p)
   }
   const out = []
   for (const poly of polys) {
-    const rings = poly.map((ring) =>
-      ring.map(([lng, lat]) => {
+    const rings = poly.map((ring) => {
+      const projected = ring.map(([lng, lat]) => {
         const pt = projection([lng, lat])
-        return pt ? [Math.round(pt[0] * 10) / 10, Math.round(pt[1] * 10) / 10] : [0, 0]
-      }),
-    )
+        return pt ? [Math.round(pt[0]), Math.round(pt[1])] : [0, 0]
+      })
+      return decimateRing(projected)
+    })
     const outer = rings[0]
     if (!outer || outer.length < 4) continue
     if (ringArea(outer) > 0) rings[0] = [...outer].reverse()
@@ -53,21 +77,23 @@ function projectRings(geometry, projection) {
 }
 
 async function main() {
-  const geo = await fetch(GEO_URL).then((r) => {
-    if (!r.ok) throw new Error(`geo-countries fetch failed: ${r.status}`)
-    return r.json()
-  })
+  const [world, numericToIso] = await Promise.all([
+    fetch(GEO_URL).then((r) => r.json()),
+    loadNumericToIso3(),
+  ])
 
+  const countries = feature(world, world.objects.countries)
   const projection = geoNaturalEarth1().fitExtent(
     [[PAD, PAD], [WIDTH - PAD, HEIGHT - PAD]],
-    geo,
+    countries,
   )
 
   const items = []
-  for (const f of geo.features) {
-    const iso = isoFromProps(f.properties || {})
+  for (const f of countries.features) {
+    const id = String(f.id ?? f.properties?.id ?? '')
+    const iso = numericToIso[id] || numericToIso[String(parseInt(id, 10))] || ''
     if (!iso) continue
-    const name = f.properties?.name || f.properties?.ADMIN || ''
+    const name = f.properties?.name || ''
     const polygons = projectRings(f.geometry, projection)
     if (!polygons.length) continue
     items.push({ iso, name, polygons })
@@ -77,11 +103,14 @@ async function main() {
   mkdirSync(dirname(OUT), { recursive: true })
   writeFileSync(OUT, JSON.stringify({ width: WIDTH, height: HEIGHT, countries: items }))
 
-  const withPoly = items.filter((c) => c.polygons.length > 0).length
-  console.log(`Wrote ${items.length} countries (${withPoly} with geometry) → ${OUT}`)
+  const bytes = JSON.stringify({ width: WIDTH, height: HEIGHT, countries: items }).length
+  console.log(`Wrote ${items.length} countries → ${OUT} (${(bytes / 1024).toFixed(0)} KB)`)
   if (items.length < 150) {
-    console.error('ERROR: expected ~200+ countries with ISO codes')
+    console.error('ERROR: too few countries')
     process.exit(1)
+  }
+  if (bytes > 900_000) {
+    console.error('WARN: countries.json still large', bytes)
   }
 }
 

@@ -24,40 +24,53 @@ export function FilterPanel({
   minimized: boolean
   onToggleMinimize: () => void
 }) {
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="filter-pill"
+        onClick={onToggleMinimize}
+        aria-expanded="false"
+        aria-label="Open map filters"
+      >
+        <span className="filter-pill-label">Filters</span>
+        <span className="filter-pill-value">{FILTER_LABELS[active]} · {counts[active] ?? 0}</span>
+      </button>
+    )
+  }
+
   return (
-    <aside className={`filter-panel ${minimized ? 'minimized' : ''}`}>
+    <aside className="filter-panel" aria-label="Map filters">
       <header className="filter-header">
         <div>
           <h2>Map filters</h2>
           <p>Highlight nations on the map</p>
         </div>
-        <button type="button" className="minimize-btn" onClick={onToggleMinimize} aria-label={minimized ? 'Expand' : 'Minimize'}>
-          {minimized ? '◧' : '−'}
+        <button type="button" className="minimize-btn" onClick={onToggleMinimize} aria-label="Minimize filters">
+          ×
         </button>
       </header>
-      {!minimized && (
-        <div className="filter-body">
-          {FILTER_GROUPS.map((g) => (
-            <section key={g.title} className="filter-section">
-              <h3>{g.title}</h3>
-              <ul>
-                {g.ids.map((id) => (
-                  <li key={id}>
-                    <button
-                      type="button"
-                      className={`filter-chip ${active === id ? 'active' : ''}`}
-                      onClick={() => onChange(id)}
-                    >
-                      <span>{FILTER_LABELS[id]}</span>
-                      <span className="count">{counts[id] ?? 0}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
-      )}
+      <div className="filter-body">
+        {FILTER_GROUPS.map((g) => (
+          <section key={g.title} className="filter-section">
+            <h3>{g.title}</h3>
+            <ul>
+              {g.ids.map((id) => (
+                <li key={id}>
+                  <button
+                    type="button"
+                    className={`filter-chip ${active === id ? 'active' : ''}`}
+                    onClick={() => onChange(id)}
+                  >
+                    <span>{FILTER_LABELS[id]}</span>
+                    <span className="count">{counts[id] ?? 0}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
     </aside>
   )
 }

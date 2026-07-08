@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { WorldMapScene } from './components/WorldMapScene'
+import { MapControlsHelp } from './components/MapControlsHelp'
 import { FilterPanel } from './components/FilterPanel'
 import { DataStamp } from './components/DataStamp'
 import { FIFA_TO_ISO3, type FilterId } from './data/fifaIso'
@@ -29,7 +30,13 @@ export default function App() {
   const { state, loading, refreshing } = useLiveTournament()
   const [filter, setFilter] = useState<FilterId>('group-qualifiers')
   const [selected, setSelected] = useState<Team | null>(null)
-  const [panelMin, setPanelMin] = useState(false)
+  const [panelMin, setPanelMin] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches,
+  )
+
+  useEffect(() => {
+    if (window.matchMedia('(max-width: 640px)').matches) setPanelMin(true)
+  }, [])
 
   const teamsRef = useRef<Record<string, Team>>({})
   if (state) teamsRef.current = state.teams
@@ -90,10 +97,12 @@ export default function App() {
 
       <div className="map-wrap">
         <WorldMapScene
+          activeFilter={filter}
           highlightFifa={highlight}
           allParticipantFifa={allNations}
           onSelectTeam={onSelectTeam}
         />
+        <MapControlsHelp visible />
       </div>
 
       {selected && (
@@ -121,19 +130,18 @@ export default function App() {
       )}
 
       <div className="chrome">
-        <DataStamp
-          fetchedAt={state.fetchedAt}
-          nationCount={nationCount}
-          sourceLabel={sourceLabel}
-          apiAge={apiAge}
-        />
-        <p id="legend" className="legend">
-          <span className="swatch bright" /> Selected filter ({highlight.size})
-          <span className="swatch dim" /> Other participants
-        </p>
-        <p id="desc" className="desc">
-          Flat 3D World Cup map — filter by stage or region, tap a country for standings. Refreshes every 60s.
-        </p>
+        <div className="chrome-row">
+          <DataStamp
+            fetchedAt={state.fetchedAt}
+            nationCount={nationCount}
+            sourceLabel={sourceLabel}
+            apiAge={apiAge}
+          />
+          <p id="legend" className="legend" aria-hidden="true">
+            <span className="swatch bright" /> {highlight.size}
+            <span className="swatch dim" /> others
+          </p>
+        </div>
       </div>
     </div>
   )
