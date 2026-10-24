@@ -71,7 +71,7 @@ export default function App() {
     ? state.standings[state.teams[selected.code]?.group]?.find((s) => s.code === selected.code)
     : undefined
 
-  const sourceLabel = state.source === 'live' ? 'live' : state.source === 'cached' ? 'cached' : 'fallback'
+  const sourceLabel = state.source
   const apiAge = formatApiAge(state.apiGenerated)
 
   return (

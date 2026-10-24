@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { geoBounds, geoNaturalEarth1, geoPath } from 'd3-geo'
+import { geoNaturalEarth1, geoPath } from 'd3-geo'
 import { select } from 'd3-selection'
 import { zoom, zoomIdentity, type ZoomTransform } from 'd3-zoom'
 import { feature } from 'topojson-client'
@@ -33,18 +33,16 @@ function fitTransform(
 
   if (!matched.length) return zoomIdentity
 
-  const [[lng0, lat0], [lng1, lat1]] = geoBounds({
+  // Bounds in projected (screen) space, so the fit respects both the map's width and its
+  // height and isn't thrown off by countries that cross the antimeridian.
+  const [[x0, y0], [x1, y1]] = geoPath(project).bounds({
     type: 'FeatureCollection',
     features: matched,
   })
   const pad = paddingForFocus(highlight.size, filter)
-  const [[x0, y0], [x1, y1]] = [
-    project([lng0, lat0])!,
-    project([lng1, lat1])!,
-  ]
-  const dx = x1 - x0
-  const dy = y1 - y0
-  const scale = Math.max(0.85, Math.min(6.5, (0.86 * MAP_W) / Math.max(dx, dy) / pad))
+  const dx = Math.max(x1 - x0, 1)
+  const dy = Math.max(y1 - y0, 1)
+  const scale = Math.max(0.85, Math.min(6.5, Math.min((0.86 * MAP_W) / dx, (0.86 * MAP_H) / dy) / pad))
   const cx = (x0 + x1) / 2
   const cy = (y0 + y1) / 2
   return zoomIdentity.translate(MAP_W / 2, MAP_H / 2).scale(scale).translate(-cx, -cy)

@@ -21,8 +21,10 @@ export function DataStamp({ fetchedAt, nationCount, sourceLabel, apiAge }: Props
 
   return (
     <p id="stamp" className="stamp">
-      wheniskickoff.com · {nationCount} nations · <strong>{sourceLabel}</strong> · {secondsAgo}s ago
-      {apiAge ? ` · API ${apiAge}` : ''}
+      wheniskickoff.com · {nationCount} nations · <strong>{sourceLabel}</strong>
+      {sourceLabel === 'snapshot'
+        ? apiAge ? ` · data as of ${apiAge}` : ''
+        : ` · ${secondsAgo}s ago${apiAge ? ` · API ${apiAge}` : ''}`}
     </p>
   )
 }

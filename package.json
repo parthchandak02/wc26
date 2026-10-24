@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node scripts/build-iso-map.mjs && vite",
     "build": "node scripts/build-iso-map.mjs && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "snapshot": "node scripts/snapshot-data.mjs"
   },
   "dependencies": {
     "d3-geo": "^3.1.1",

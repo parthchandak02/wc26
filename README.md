@@ -45,8 +45,9 @@ computed in the browser from the match results published by
 
 **1 · Fetch**
 
-Groups, teams and all 104 matches come from three JSON files on wheniskickoff.com, refreshed
-every 60 seconds. The last good copy is kept in `localStorage`.
+Groups, teams and all 104 matches come from a snapshot of wheniskickoff.com's three JSON files,
+served from this site's own `public/data/` and re-read every 60 seconds. The last good copy is
+kept in `localStorage`.
 
 </td>
 <td width="33%" valign="top">
@@ -82,8 +83,8 @@ other qualified nations are muted, and d3-zoom handles pan, pinch and auto-frami
   quarter-finals, semi-finals and finalists, plus the six confederations, each with a live count.
 - **Country cards.** Confederation, FIFA rank, group position, points, goal difference and W-D-L record.
 - **Live header.** Tournament day, the current stage, and either the number of matches live now or played so far.
-- **Honest freshness stamp.** The footer says whether the data is `live`, `cached` or `fallback`,
-  how many seconds ago it was fetched, and when the API generated it.
+- **Honest freshness stamp.** The footer says whether the data is the `snapshot`, a `cached` copy
+  or the built-in `fallback`, and when wheniskickoff.com generated it.
 - **Works without the API.** With no network and no cache, the twelve groups are built in, so filters and the map still work.
 - **Plain SVG, no WebGL.** This third version replaced a React Three Fiber globe that was slow
   and unreliable on mobile Safari.
@@ -101,10 +102,9 @@ npm run build    # static site in dist/
 The build step downloads an ISO 3166 table from GitHub to map world-atlas ids to country
 codes, so it needs network access. The output is a static `dist/` folder on Cloudflare Pages.
 
-> **Note.** wheniskickoff.com does not send CORS headers, so the browser blocks the app's
-> requests and the deployed site falls back to its built-in groups (0 matches, group stage).
-> The screenshots above seed the app's own cache with the real API responses to show the
-> intended view.
+> **Note.** wheniskickoff.com does not send CORS headers, so a browser can't read its API
+> directly. The app instead loads a snapshot saved in `public/data/` (final results, generated
+> 24 October 2026). Run `npm run snapshot` to refresh it before a build.
 
 <details>
 <summary><b>Project layout</b></summary>
@@ -115,6 +115,7 @@ src/components/WorldMapScene.tsx  d3-geo SVG map, d3-zoom, auto-framing and coun
 src/components/FilterPanel.tsx  Stage and confederation filters
 src/data/fifaIso.ts             FIFA code to ISO-3 mapping and filter labels
 scripts/build-iso-map.mjs       Generates the numeric ISO lookup at build time
+scripts/snapshot-data.mjs       Saves the wheniskickoff.com API snapshot into public/data/
 public/_headers                 Cloudflare Pages cache rules
 ```
 

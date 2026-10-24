@@ -48,7 +48,7 @@ export type TournamentState = {
   groups: GroupData[]
   matches: Match[]
   standings: Record<string, Standing[]>
-  source: 'live' | 'cached' | 'fallback'
+  source: 'snapshot' | 'cached' | 'fallback'
   updated: string
   fetchedAt: number
   apiGenerated: string | null
@@ -61,10 +61,13 @@ export type TournamentState = {
 const CACHE_KEY = 'wc26-cache_v2'
 export const POLL_MS = 60_000
 
+// wheniskickoff.com/data/v1/ sends no CORS headers, so browsers block it. The app reads a
+// same-origin snapshot of those files instead (scripts/snapshot-data.mjs, `npm run snapshot`).
+const DATA_BASE = `${import.meta.env.BASE_URL}data/`
 const API = {
-  groups: 'https://wheniskickoff.com/data/v1/groups.json',
-  teams: 'https://wheniskickoff.com/data/v1/teams.json',
-  matches: 'https://wheniskickoff.com/data/v1/matches.json',
+  groups: `${DATA_BASE}groups.json`,
+  teams: `${DATA_BASE}teams.json`,
+  matches: `${DATA_BASE}matches.json`,
 }
 
 const FALLBACK_GROUPS: GroupData[] = [
@@ -227,12 +230,22 @@ function inferStage(matches: Match[]): string {
   return 'GROUP STAGE'
 }
 
+const TOURNAMENT_START = Date.parse('2026-06-11T00:00:00Z')
+const DAY_MS = 86400000
+// The final is on 19 July 2026: day 39. Used when the match list hasn't loaded.
+const FALLBACK_TOURNAMENT_DAYS = 39
+
 function tournamentDay(matches: Match[]): number {
-  const start = new Date('2026-06-11T00:00:00Z')
-  const today = new Date()
-  const diff = Math.floor((today.getTime() - start.getTime()) / 86400000) + 1
+  const lastMatch = matches.reduce((max, m) => {
+    const t = Date.parse(`${m.date}T00:00:00Z`)
+    return Number.isNaN(t) ? max : Math.max(max, t)
+  }, 0)
+  const totalDays = lastMatch
+    ? Math.floor((lastMatch - TOURNAMENT_START) / DAY_MS) + 1
+    : FALLBACK_TOURNAMENT_DAYS
+  const diff = Math.floor((Date.now() - TOURNAMENT_START) / DAY_MS) + 1
   const finished = matches.filter((m) => m.status === 'FINISHED').length
-  return Math.max(1, Math.min(32, diff > 0 ? diff : finished > 0 ? Math.ceil(finished / 3) : 1))
+  return Math.max(1, Math.min(totalDays, diff > 0 ? diff : finished > 0 ? Math.ceil(finished / 3) : 1))
 }
 
 const CONFED_BY_CODE: Record<string, string> = {
@@ -290,7 +303,7 @@ export async function loadTournament(): Promise<TournamentState> {
     matches = mJson.data ?? []
     apiGenerated = mJson.meta?.generated ?? gJson.meta?.generated ?? null
     updated = apiGenerated ?? new Date().toISOString()
-    source = 'live'
+    source = 'snapshot'
     persistCache(gJson, tJson, mJson)
   } catch {
     try {
